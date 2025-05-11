@@ -1,0 +1,214 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{multirow} 
+\geometry{margin=1in}
+\usepackage{fancyhdr}
+\usepackage{array}  % Add this to your preamble if not already included
+\usepackage{tabularx}  % Add this to your preamble if not already present
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{DT8059 Project Plan}
+\lhead{Halmstad University}
+\rfoot{Page \thepage}
+
+\title{Group 10 - Project Plan}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document outlines the project plan for the course \textit{Machine Learning for Predictive Maintenance}, conducted at Halmstad University during the Spring Semester of the 2025 academic year.
+The primary objective of the project is to develop and evaluate a method for Predictive Maintenance using either real-world or simulated datasets. 
+The plan provides a comprehensive description of the selected dataset, the formulated problem, the proposed methodologies, the experimental setup, and the evaluation metrics to be used for assessing the outcomes.
+
+\end{abstract}
+
+\section{Team Members}
+The project is carried out by the following students:
+
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.2} % More vertical spacing
+\begin{tabularx}{0.8\textwidth}{>{\bfseries}l X}
+Name & Email \\
+\hline
+Abdelhakim Mraihi & hakimmraihi1@gmail.com \\
+Valeriu Dimidov   & valdim25@student.hh.se \\
+\end{tabularx}
+\end{table}
+
+\section{Dataset}
+
+The dataset used in this project is the \textit{SCANIA Component X Dataset} released as part of the Industrial Challenge at the 22nd International Symposium on Intelligent Data Analysis (IDA 2024). 
+It consists of real-world multivariate time series data collected from an anonymized engine component ("Component X") across a fleet of SCANIA trucks. The dataset comprises three sources of information for each vehicle: (i) operational readouts from on-board sensors, (ii) repair records from workshop visits, and (iii) categorical specifications of the vehicles.
+Further details about these three data sources and their structure are provided in \cite{scania_dataset_paper}.
+
+\section{Problem Formulation}
+
+The goal of this project is to develop a predictive model capable of estimating the proximity of a vehicle component to failure, using the operational readouts. Specifically, the task is formulated as a \textbf{multiclass classification problem}, where each vehicle is assigned a class label based on the time remaining until a component failure (Time-To-Event, or TTE). The prediction target is categorized into five classes as listed in Table \ref{tab:class_definition}.
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c|l|}
+\hline
+\textbf{Class} & \textbf{Time-To-Event Interval (in time steps)} \\
+\hline
+0 & More than 48 before failure \\
+1 & Between 24 and 48 \\
+2 & Between 12 and 24 \\
+3 & Between 6 and 12 \\
+4 & Within 6 before failure \\
+\hline
+\end{tabular}
+\caption{Definition of classes based on time-to-event intervals}
+\label{tab:class_definition}
+\end{table}
+
+\noindent
+This categorization reflects the progressive degradation of the component, with later classes indicating an increasing proximity to failure. As illustrated in Figure~\ref{fig:health-indicator}, the model must accurately classify the most recent observation of the degradation trajectory of a component. 
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.7\textwidth]{fig/health-indicator.PNG}
+\caption{Illustration of the equipment health indicator and the five TTE-based class intervals. Source \cite{scania_dataset_paper}}
+\label{fig:health-indicator}
+\end{figure}
+
+\section{Candidate Methodologies}
+
+To address the predictive maintenance task, we investigate two deep learning-based approaches that differ in how they handle the time-series structure of the input data:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{enumerate}
+    \item \textbf{Sequence Modeling with GRU} \\
+
+The core methodology in our project centers on sequential modeling using a Gated Recurrent Unit (GRU) architecture. For each vehicle, we extracted the last 10 time steps of sensor readings and combined them with encoded vehicle specifications. These multivariate time series sequences were used as input to a GRU-based neural network.
+
+The GRU is capable of capturing temporal dependencies in sensor data and is well-suited for modeling degradation trends leading up to failures. The hidden state output from the GRU was passed through a fully connected layer to produce class logits for the multiclass classification task. This architecture allows the model to learn progression patterns in operational behavior and distinguish between healthy, degrading, and near-failure states.
+
+
+    \item \textbf{Sequential Modeling with LSTM} \\
+    In contrast to the aggregation-based approach, this method retains the raw temporal structure of the observations. The time series is fed directly into a Long Short-Term Memory (LSTM) network, which is designed to capture temporal dependencies and sequential patterns in the data. This architecture is better suited for detecting fine-grained degradation signals that unfold over time.
+\end{enumerate}
+
+These two candidate methodologies will be implemented and compared based on performance metrics and cost-sensitive evaluation criteria defined by the challenge.
+\section{Experimental Setup}
+\begin{itemize}
+    \item \textbf{Environment:} All experiments are conducted in Python 3.11.12 using \texttt{PyTorch} in Google Colab.
+
+    \item \textbf{Data Splits and Cross-Validation:}
+    \begin{itemize}
+        \item We use the official train/validation split provided in the SCANIA Component X dataset.
+        \item To reduce variance due to random initialization and training dynamics, we perform \textbf{5-fold stratified cross-validation} on the training set. Performance metrics are reported as mean and standard deviation across folds.
+    \end{itemize}
+
+    \item \textbf{Training:}
+    \begin{itemize}
+        \item Early stopping based on validation loss
+        \item Hyperparameters (learning rate, batch size, hidden size) tuned via Grid Search or Optuna
+    \end{itemize}
+\end{itemize}
+\section{Results Evaluation}
+ML models for IDA 2024 challenge are typically evaluated using a custom metric introduced in  \cite{scania_dataset_paper}. 
+This cost function assigns different penalties associated with different types of misclassifications.
+In particular, it imposes higher penalties on false negatives, with the cost increasing proportionally to the severity of the component's degradation state.
+
+\begin{table}[h]
+     \caption{Cost Matrix}
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+        \hline
+        & \multicolumn{6}{|c|}{\textbf{Predicted}} \\ \hline
+        \multirow{6}{*}{\rotatebox{90}{\textbf{Actual}}} && \textbf{0} & \textbf{1} & \textbf{2} & \textbf{3} & \textbf{4} \\ \cline{2-7}
+        & \textbf{0} & 0   & 7   & 8   & 9   & 10 \\ \cline{2-7}
+        & \textbf{1} & 200 & 0   & 7   & 8   & 9  \\ \cline{2-7}
+        & \textbf{2} & 300 & 200 & 0   & 7   & 8  \\ \cline{2-7}
+        & \textbf{3} & 400 & 300 & 200 & 0   & 7  \\ \cline{2-7}
+        & \textbf{4} & 500 & 400 & 300 & 200 & 0  \\ \hline
+    \end{tabular}
+    \label{tab:cost_matrix}
+\end{table}
+
+\noindent Let \textit{m} denote a ML model, let \textit{C} indicate the cost matrix outlined in Table \ref{tab:cost_matrix}, and let $\mathit{M_{ \mathcal{D}}}$ represent the confusion matrix generated by evaluating \textit{m} on the Scania dataset $ \mathcal{D}$.
+The cost of \textit{m} for the Component X PdM problem is expressed as:
+
+\begin{equation} \text{Cost($\mathit{M_{ \mathcal{D}}}$)} = \sum_{i=0}^{4} \sum_{j=0}^{4} C[i,j] \cdot M_{ \mathcal{D}}[i,j] 
+\label{eq:challege-metric}
+\end{equation}
+
+\section{Time Plan}
+
+The project is structured across four weeks and will be executed in iterative development cycles. The detailed timeline, including milestones and corresponding iterations, is presented in Table~\ref{tab:timeline}.
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|>{\centering\arraybackslash}m{3.5cm}|>{\centering\arraybackslash}m{4cm}|m{7cm}|}
+\hline
+\textbf{Time} & \textbf{Phase} & \textbf{Milestones / Activities} \\
+\hline
+12--18 May & Prototype Development &
+\begin{itemize}
+    \item Set up the preprocessing pipeline and perform feature selection/generation.
+    \item Implement the initial version of the predictive model.
+    \item Log preliminary results and document encountered challenges.
+\end{itemize} \\
+\hline
+19--25 May & Preliminary Report and Iteration 2 &
+\begin{itemize}
+    \item Submit the preliminary project report.
+    \item Analyze challenges and limitations from the first iteration.
+    \item Begin second development iteration with model improvements.
+\end{itemize} \\
+\hline
+26 May -- 1 June & Project Feedback and Iteration 3 &
+\begin{itemize}
+    \item Receive and incorporate feedback on the preliminary report.
+    \item Conduct the third development iteration and re-run experiments.
+    \item Finalize experimental results, plots, and performance metrics.
+    \item Draft and revise the final project report.
+\end{itemize} \\
+\hline
+2--8 June & Final Presentation and Submission &
+\begin{itemize}
+    \item Submit the final project report.
+    \item Deliver the final presentation to the course instructors.
+\end{itemize} \\
+\hline
+\end{tabular}
+\caption{Detailed project timeline with phases and deliverables}
+\label{tab:timeline}
+\end{table}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
