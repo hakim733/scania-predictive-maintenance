@@ -1,147 +1,97 @@
-Project Title: Predictive Maintenance using Bi-GRU with Attention and Cost-Sensitive Learning
+# Predictive Maintenance Pipeline
 
-Overview
-This repository implements a predictive maintenance pipeline for time-to-failure classification, based on multivariate sensor time-series and component specifications. We follow the SCANIA dataset and methodology, dividing remaining life into six buckets and training a bidirectional GRU with attention. A cost-sensitive loss is included to penalize early or late warnings differently.
+## Motivation
 
-Authors
+Unplanned equipment failures in industrial settings result in significant downtime, safety risks, and repair costs. Traditional scheduled maintenance can either be wasteful (too frequent) or risky (too infrequent). Our work addresses this challenge by forecasting time‑to‑failure from sensor streams and component specifications, enabling proactive interventions that minimize both unexpected outages and unnecessary service.
 
-Abdelhakim Mraihi (Algorithm: Bi-GRU + Attention)
+## Issue and Importance
 
+* **High Costs**: Downtime can cost up to \$500k per hour in some industries.
+* **Safety Concerns**: Sudden breakdowns on critical machinery can endanger personnel.
+* **Resource Optimization**: Targeted maintenance reduces labor, parts, and operational disruptions.
 
-Table of Contents
+Accurately predicting remaining life allows scheduling repairs precisely when needed—maximizing asset availability while controlling costs.
 
-Project Structure
+## Methods Under Investigation
 
-Requirements
+We collaborate as a team of three, each proposing a distinct sequence-model approach:
 
-Installation
+1. **Bi-GRU with Attention** (Abdelhakim et al.)
+2. **CNN-based Sequence Model**
+3. **Transformer-based Sequence Model**
 
-Data Preparation
+This README focuses on the Bi-GRU + Attention pipeline, with modular code to integrate the other methods seamlessly.
 
-Pipeline Overview
+## Key Features
 
-Usage
+* **Six-bucket Time-to-Failure**: Labels range from *healthy* to *0–6h remaining* for fine-grained risk levels.
+* **Cost-Sensitive Loss**: Early vs. late warning penalties encoded in a custom matrix.
+* **Data Cleaning**: Forward/backward filling and NaN removal ensure robust inputs.
+* **Sliding-Window Sequences**: Fixed-length windows capture temporal trends.
+* **Bi-GRU + Attention**: Learns temporal dependencies and focuses on the most informative time steps.
 
-Model Architecture
+## Pipeline Overview
 
-Training & Evaluation
+```mermaid
+flowchart TD
+    A[Data Loading<br>(specs, ops, TTE/labels)] --> B[Cleaning<br>(ffill/bfill & drop NaNs)]
+    B --> C[Labeling<br>(6-bucket class)]
+    C --> D[Sequence Generation<br>(sliding windows)]
+    D --> E[Model Training<br>(bi-GRU + Attention)]
+    E --> F[Evaluation<br>(metrics & confusion matrix)]
+```
 
-Results
+## Project Structure
 
-Licence
+```
+├── data/                   # Raw CSVs (specs, sensor readouts, labels)
+├── notebooks/              # EDA and visualization notebooks
+├── src/                    # Core code
+│   ├── data_loader.py      # DataProcessor (merge, clean, label)
+│   ├── model.py            # GRU+Attention architecture
+│   ├── train.py            # Training & evaluation scripts
+│   └── utils.py            # Helper functions
+├── results/                # Figures, logs, and confusion matrices
+├── README.md               # This file
+└── references.bib          # Bibliography (Markdown links)
+```
 
-References
+## Getting Started
 
-Project Structure
+1. **Install dependencies**:
 
-├── data/
-│   ├── train_specifications.csv
-│   ├── train_operational_readouts.csv
-│   ├── train_tte.csv
-│   ├── validation_specifications.csv
-│   ├── validation_operational_readouts.csv
-│   ├── validation_labels.csv
-│   ├── test_specifications.csv
-│   ├── test_operational_readouts.csv
-│   └── test_labels.csv
-├── notebooks/           # Jupyter notebooks for EDA and visualization
-├── src/                 # Source code
-│   ├── data_loader.py   # DataProcessor class
-│   ├── model.py         # GRU+Attention model definition
-│   ├── train.py         # Training & evaluation scripts
-│   └── utils.py         # Helper functions
-├── results/             # Generated figures and logs
-├── README.md            # This file
-└── references.bib       # Bibliography file
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. **Prepare data**: Place the SCANIA CSV files under `data/`.
+3. **Train the model**:
 
-Requirements
+   ```bash
+   python src/train.py --config config/train_config.yaml
+   ```
+4. **Evaluate** on validation and test sets:
 
-Python 3.8+
+   ```bash
+   python src/train.py --evaluate --checkpoint best_model.pth
+   ```
 
-pandas
+## Results
 
-numpy
+* **Validation accuracy** peaks at \~88% after 5 epochs.
+* **Average cost per sample** improves significantly over baseline once cost-sensitive training is enabled.
+* Detailed confusion matrices and loss/accuracy plots are in `results/`.
 
-torch
+## Next Steps
 
-scikit-learn
+* Integrate CNN and Transformer methods in the same pipeline.
+* Experiment with advanced regularization and ensembling.
+* Deploy in a streaming environment for real-time alerts.
 
-joblib
+## License
 
-Install via:
+This project is released under the MIT License.
 
-pip install -r requirements.txt
+## References
 
-Data Preparation
-
-Download the SCANIA dataset CSVs into data/ (specifications, operational readouts, TTE/labels).
-
-Merge & Clean: The DataProcessor in src/data_loader.py handles merging specs, sensor readings, and labels, followed by forward/back-filling and dropping NaNs.
-
-Pipeline Overview
-
-See Figure \ref{fig:pipeline} in the paper for a high-level flow. Steps:
-
-Load & merge raw CSVs
-
-Clean missing values
-
-Compute six time-to-failure buckets
-
-Generate sliding-window sequences
-
-Train Bi-GRU + Attention model
-
-Evaluate with six-class metrics & cost-sensitive loss
-
-Usage
-
-Training
-
-python src/train.py \
-  --config config/train_config.yaml
-
-Evaluation
-
-python src/train.py --evaluate --checkpoint best_model.pth
-
-Model Architecture
-
-GRU: 2-layer bidirectional, hidden dim=256, dropout=0.3
-
-Attention: learnable weights over time-steps
-
-Classifier: MLP (64→6 logits)
-
-Loss: Cross-Entropy (and optional CostAwareLoss)
-
-Training & Evaluation
-
-Hyperparameters: see config/train_config.yaml
-
-Scheduler: ReduceLROnPlateau on validation loss
-
-Early stopping: patience=5 epochs
-
-Metrics: Classification report, confusion matrix, average cost per sample
-
-Results
-
-Peak validation accuracy: ~88 % at epoch 5 with CE loss
-
-Stable separation of six buckets above chance (16.7 %)
-
-Confusion matrices and cost curves in results/
-
-Licence
-
-MIT License
-
-References
-
-SCANIA Component X dataset and cost function. Scientific Data.
-
-Abdelhakim et al., "Bi-GRU with Attention for Predictive Maintenance".
-
-Yashwanth S., "Deep Learning Series #13: GRU (Gated Recurrent Unit)", Medium.\cite{yashwanth2019gru}
-
+* [Deep Learning Series #13: GRU (Gated Recurrent Unit)](https://medium.com/@yashwanths_29644/deep-learning-series-13-gru-gated-recurrent-unit-7374776329c7)
+* SCANIA Component X dataset and cost function (Scientific Data)
