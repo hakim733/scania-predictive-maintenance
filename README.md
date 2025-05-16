@@ -75,23 +75,65 @@ flowchart TD
    python src/train.py --evaluate --checkpoint best_model.pth
    ```
 
+
+## Methodology
+
+1. **Data Loading & Cleaning**  
+   Merge specifications, sensor streams, and TTE/label files by `vehicle_id`.  
+   Forward-/back-fill missing readings and drop any remaining NaNs.
+
+2. **Six-Bucket Labeling**  
+   Compute `tte = length_of_study_time_step − time_step`, then bin into  
+   `[-∞,0]→0`, `(0,6]→5`, `(6,12]→4`, `(12,24]→3`, `(24,48]→2`, `(48,∞)→1`.
+
+3. **Sequence Generation**  
+   Slide length-20 windows over each vehicle’s features; standardize across all windows.
+
+4. **Model Architecture**  
+   2-layer bidirectional GRU (hidden 256, dropout 0.3) + attention + MLP head (6 outputs).
+
+5. **Training**  
+   - Warm-start with plain cross-entropy to ensure stability.  
+   - Fine-tune with cost-aware loss:  
+     ```python
+     CostAwareLoss = mean(CE * cost_matrix[true, pred])
+     ```  
+   - AdamW optimizer, ReduceLROnPlateau scheduler, gradient clipping, early stopping.
+
+6. **Evaluation**  
+   Six-class precision/recall/F1, 6×6 confusion matrix, and average cost per sample.
+
 ## Results
 
-* **Validation accuracy** peaks at \~88% after 5 epochs.
-* **Average cost per sample** improves significantly over baseline once cost-sensitive training is enabled.
-* Detailed confusion matrices and loss/accuracy plots are in `results/`.
+**Best Validation Accuracy:** 88.22 % (Epoch 5)
 
-## Next Steps
+**Validation Metrics at Epoch 5:**
 
-* Integrate CNN and Transformer methods in the same pipeline.
-* Experiment with advanced regularization and ensembling.
-* Deploy in a streaming environment for real-time alerts.
+```text
+Epoch 05 | Train Loss: 0.0947 | Val Loss: 0.7234 | Val Acc: 0.8822
+                precision    recall  f1-score   support
 
-## License
+**Classification Report (Test Set):
 
-This project is released under the MIT License.
+Healthy (tte ≤ 0)       0.98      0.99      0.98    108163
+> 48h remaining         0.00      0.00      0.00       429
+24–48h remaining        0.00      0.00      0.00       268
+12–24h remaining        0.00      0.00      0.00       764
+6–12h remaining         0.00      0.00      0.00      1259
+0–6h remaining          0.00      0.00      0.00         0
 
-## References
+accuracy                           0.96    110883
+macro avg       0.16      0.16      0.16    110883
+weighted avg    0.95      0.96      0.96    110883
+**Confusion Matrix (Test Set):
+[[106990    961    212      0      0      0]
+ [   429      0      0      0      0      0]
+ [   268      0      0      0      0      0]
+ [   764      0      0      0      0      0]
+ [  1192     56     11      0      0      0]
+ [     0      0      0      0      0      0]]
+```
+# License
+MIT License
 
-* [Deep Learning Series #13: GRU (Gated Recurrent Unit)](https://medium.com/@yashwanths_29644/deep-learning-series-13-gru-gated-recurrent-unit-7374776329c7)
-* SCANIA Component X dataset and cost function (Scientific Data)
+Copyright (c) 2025 [Abdelhakim _Mraihi]
