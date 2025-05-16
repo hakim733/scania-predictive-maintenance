@@ -32,7 +32,7 @@ This README focuses on the Bi-GRU + Attention pipeline, with modular code to int
 
 ## Pipeline Overview
 
-```mermaid
+```
 flowchart TD
     A[Data Loading<br>(specs, ops, TTE/labels)] --> B[Cleaning<br>(ffill/bfill & drop NaNs)]
     B --> C[Labeling<br>(6-bucket class)]
